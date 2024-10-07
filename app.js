@@ -21,92 +21,62 @@ app.get('/books', (req, res) => {
     res.json(books);
 });
 
-// 2. Get the books based on ISBN
-app.get('/books/:isbn', (req, res) => {
-    const book = books.find(b => b.isbn === req.params.isbn);
-    if (book) {
-        res.json(book);
-    } else {
-        res.status(404).send('Book not found');
+// 10. Get all books using an async callback function
+app.get('/books/async', async (req, res) => {
+    try {
+        const allBooks = await new Promise((resolve) => {
+            resolve(books); // Simulating async operation
+        });
+        res.json(allBooks);
+    } catch (error) {
+        res.status(500).send('Error retrieving books');
     }
 });
 
-// 3. Get all books by Author
-app.get('/books/author/:name', (req, res) => {
-    const authorBooks = books.filter(b => b.author.toLowerCase() === req.params.name.toLowerCase());
-    res.json(authorBooks);
-});
-
-// 4. Get all books based on Title
-app.get('/books/title/:title', (req, res) => {
-    const titleBooks = books.filter(b => b.title.toLowerCase().includes(req.params.title.toLowerCase()));
-    res.json(titleBooks);
-});
-
-// 5. Get book Review
-app.get('/reviews/:bookId', (req, res) => {
-    const book = books.find(b => b.id == req.params.bookId);
-    if (book) {
-        res.json(book.reviews);
-    } else {
-        res.status(404).send('Book not found');
-    }
-});
-
-// 6. Register New user
-app.post('/register', (req, res) => {
-    const { username, password } = req.body;
-    const newUser = { id: users.length + 1, username, password };
-    users.push(newUser);
-    res.status(201).json(newUser);
-});
-
-// 7. Login as a Registered user
-app.post('/login', (req, res) => {
-    const { username, password } = req.body;
-    const user = users.find(u => u.username === username && u.password === password);
-    if (user) {
-        res.json({ message: 'Login successful', user });
-    } else {
-        res.status(401).send('Invalid credentials');
-    }
-});
-
-// Registered Users
-
-// 8. Add/Modify a book review
-app.post('/reviews', (req, res) => {
-    const { bookId, reviewText } = req.body;
-    const book = books.find(b => b.id == bookId);
-    if (book) {
-        const newReview = { id: reviews.length + 1, text: reviewText };
-        book.reviews.push(newReview);
-        reviews.push(newReview);
-        res.status(201).json(newReview);
-    } else {
-        res.status(404).send('Book not found');
-    }
-});
-
-// 9. Delete book review added by that particular user
-app.delete('/reviews/:reviewId', (req, res) => {
-    const reviewId = parseInt(req.params.reviewId);
-    let bookFound = false;
-
-    books.forEach(book => {
-        const reviewIndex = book.reviews.findIndex(r => r.id === reviewId);
-        if (reviewIndex !== -1) {
-            book.reviews.splice(reviewIndex, 1);
-            bookFound = true;
+// 11. Search by ISBN using Promises
+app.get('/books/isbn/:isbn', (req, res) => {
+    const isbn = req.params.isbn;
+    const bookPromise = new Promise((resolve, reject) => {
+        const book = books.find(b => b.isbn === isbn);
+        if (book) {
+            resolve(book);
+        } else {
+            reject('Book not found');
         }
     });
 
-    if (bookFound) {
-        res.json({ message: 'Review deleted' });
-    } else {
-        res.status(404).send('Review not found');
-    }
+    bookPromise
+        .then(book => res.json(book))
+        .catch(err => res.status(404).send(err));
 });
+
+// 12. Search by Author
+app.get('/books/author/:name', (req, res) => {
+    const authorName = req.params.name;
+    const authorPromise = new Promise((resolve) => {
+        const authorBooks = books.filter(b => b.author.toLowerCase() === authorName.toLowerCase());
+        resolve(authorBooks);
+    });
+
+    authorPromise
+        .then(authorBooks => res.json(authorBooks))
+        .catch(err => res.status(404).send('No books found for this author'));
+});
+
+// 13. Search by Title
+app.get('/books/title/:title', (req, res) => {
+    const title = req.params.title;
+    const titlePromise = new Promise((resolve) => {
+        const titleBooks = books.filter(b => b.title.toLowerCase().includes(title.toLowerCase()));
+        resolve(titleBooks);
+    });
+
+    titlePromise
+        .then(titleBooks => res.json(titleBooks))
+        .catch(err => res.status(404).send('No books found with this title'));
+});
+
+// Other existing endpoints...
 
 // Start the server
 const PORT = process.env.PORT || 3000;
